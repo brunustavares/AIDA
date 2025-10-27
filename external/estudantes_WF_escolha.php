@@ -99,7 +99,7 @@ class estudantes_WF_escolha extends \core_external\external_api {
                                                 cs.fullname,
                                                 chc.name AS choice_name,
                                                 chc_opt.text AS option_text,
-                                                IF(COALESCE(chc_ans.optionid IS NOT NULL, FALSE) AND chc_opt.text = 'Sim', 1, 0) AS optionID,
+                                                IF(COALESCE(chc_ans.optionid IS NOT NULL, FALSE) AND chc_opt.text = 'Presencialmente', 1, 0) AS optionID,
                                                 chc_ans.timemodified,
                                                 ROW_NUMBER() OVER (
                                                                    PARTITION BY cs.stdNum

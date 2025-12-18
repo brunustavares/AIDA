@@ -11,7 +11,7 @@
  * @copyright  Copyright (C) 2024-2025 Bruno Tavares
  * @license    GNU General Public License v3 or later
  *             https://www.gnu.org/licenses/gpl-3.0.html
- * @version    2025071604
+ * @version    2025121806
  * @date       2024-10-09
  *
  * This program is free software: you can redistribute it and/or modify
@@ -173,6 +173,15 @@ $functions = [
         'methodname' => 'execute',
         'classpath' => 'local/aida/external/feedback_efolios_palavras.php',
         'description' => 'total de palavras no feedback dos e-fólios',
+        'capabilities' => $capabilities,
+        'type' => 'read',
+        'ajax' => true,
+    ],
+    'local_aida_folio_historico_data' => [
+        'classname' => 'folio_historico_data',
+        'methodname' => 'execute',
+        'classpath' => 'local/aida/external/folio_historico_data.php',
+        'description' => 'histórico de datas dos e-fólios',
         'capabilities' => $capabilities,
         'type' => 'read',
         'ajax' => true,

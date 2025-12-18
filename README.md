@@ -66,6 +66,7 @@ The following is a detailed list of all web services provided by the AIDA plugin
 *   **`local_aida_estudantes_UC_actividade`**: Actividades dos estudantes nas UCs.
 *   **`local_aida_estudantes_UC_escolha`**: Escolhas do método de avaliação por estudante e UC.
 *   **`local_aida_estudantes_WF_escolha`**: Escolhas da realização presencial dos fluxos por estudante.
+*   **`local_aida_folio_historico_data`**: Histórico de datas dos e-fólios.
 
 ### 3.3. Forum Posts & Interaction
 

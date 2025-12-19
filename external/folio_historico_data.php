@@ -59,22 +59,28 @@ class folio_historico_data extends \core_external\external_api {
         global $DB;
 
         if ($lista_stds) {
-            $criteria_Stds = "AND stdNum IN (" . base64_decode($lista_stds) . ") ";
+            $criteria_Stds = "AND u.username IN (" . base64_decode($lista_stds) . ") ";
         }
 
         if ($lista_ucs) {
-            $criteria_UCs = "AND SUBSTR(crsIDn, 1, 5) IN (" . base64_decode($lista_ucs) . ")";
+            $criteria_UCs = "AND SUBSTR(c.idnumber, 1, 5) IN (" . base64_decode($lista_ucs) . ")";
         }
 
         $query = "SELECT /*+ MAX_EXECUTION_TIME(0) */
                          view_ID() AS id,
                          '" . $ano_lectivo . "' AS al,
-                         crsIDn AS ucsname,
+                         u.username AS stdnum,
+                         to_ascii(CONCAT(u.firstname, ' ', u.lastname)) AS 'stdname',
+                         u.id AS stdid,
+                         c.idnumber AS ucsname,
+                         to_ascii(c.fullname) AS ucfname,
+                         c.id AS ucid,
                          modIDn AS folio,
-                         close_date AS closedt,
-                         stdNum AS stdnum
-                  FROM moodle.tbl_folio_date_history
-                  WHERE SUBSTR(crsIDn, 7, 2) COLLATE utf8mb4_0900_ai_ci = SUBSTR('" . $ano_lectivo . "', 3, 2) COLLATE utf8mb4_0900_ai_ci "
+                         close_date AS closedt
+                  FROM moodle.tbl_folio_date_history h
+                      INNER JOIN moodle.mdl_course c ON c.idnumber = h.crsIDn
+                      INNER JOIN moodle.mdl_user u ON u.username = h.stdNum
+                  WHERE SUBSTR(c.idnumber, 7, 2) COLLATE utf8mb4_0900_ai_ci = SUBSTR('" . $ano_lectivo . "', 3, 2) COLLATE utf8mb4_0900_ai_ci "
                     . $criteria_Stds .
                       $criteria_UCs . ";";
 
@@ -88,10 +94,14 @@ class folio_historico_data extends \core_external\external_api {
             new external_single_structure([
                 'id' => new external_value(PARAM_INT, 'chave primaria'),
                 'al' => new external_value(PARAM_INT, 'ano lectivo'),
+                'stdnum' => new external_value(PARAM_TEXT, 'username do estudante'),
+                'stdname' => new external_value(PARAM_TEXT, 'nome do estudante'),
+                'stdid' => new external_value(PARAM_INT, 'ID do estudante'),
                 'ucsname' => new external_value(PARAM_TEXT, 'nume curto da UC'),
+                'ucfname' => new external_value(PARAM_TEXT, 'nome completo da UC'),
+                'ucid' => new external_value(PARAM_INT, 'ID da UC'),
                 'folio' => new external_value(PARAM_TEXT, 'nome do folio'),
-                'closedt' => new external_value(PARAM_TEXT, 'data de encerramento do folio'),
-                'stdnum' => new external_value(PARAM_TEXT, 'numero do estudante'),])
+                'closedt' => new external_value(PARAM_TEXT, 'data de encerramento do folio'),])
         );
     }
 }

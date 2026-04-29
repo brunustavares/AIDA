@@ -58,21 +58,17 @@ class iduc extends \core_external\external_api {
     public static function execute($ano_lectivo, $lista_ucs=null, $estrategia_de_avaliacao=null) {
         global $DB;
 
-        $criteria = "WHERE c.idnumber LIKE CONCAT('_1___\_', SUBSTRING('" . $ano_lectivo . "', 3, 2), '\_MATRIZ') 
-                         AND db.name = 'IdUC' ";
+        $criteria = "WHERE c.idnumber LIKE CONCAT('_1___\_', SUBSTRING('" . $ano_lectivo . "', 3, 2), '\_MATRIZ') ";
 
         if ($lista_ucs) {
             $criteria .= "AND SUBSTR(c.idnumber, 1, 5) IN (" . base64_decode($lista_ucs) . ") ";
         }
 
         if ($estrategia_de_avaliacao) {
-            $criteria .= "AND estrategia_de_avaliacao = '" . $estrategia_de_avaliacao . "' ";
+            $criteria .= "AND estrategia_de_avaliacao LIKE '%" . $estrategia_de_avaliacao . "' ";
         }
 
-        $criteria .= "GROUP BY c.id , db.id
-               ) AS IdUC
-                   INNER JOIN moodle.mdl_course c ON substr(c.idnumber, 1, 5) = IdUC.codigo_da_uc
-               ORDER BY c.shortname ";
+        $criteria .= "ORDER BY c.shortname ";
 
         $query = "SELECT /*+ MAX_EXECUTION_TIME(0) */
                          IdUC.id,
@@ -177,8 +173,12 @@ class iduc extends \core_external\external_api {
                             JOIN moodle.mdl_data_content dbc ON dbc.fieldid = dbf.id
                             JOIN moodle.mdl_data_records dbr ON dbr.dataid = db.id
                             JOIN moodle.mdl_course c ON c.id = db.course
-                            JOIN moodle.mdl_user u ON u.id = dbr.userid "
-                      . $criteria . ";";
+                            JOIN moodle.mdl_user u ON u.id = dbr.userid
+                        WHERE db.name = 'IdUC' 
+                        GROUP BY c.id , db.id
+                       ) AS IdUC
+                      INNER JOIN moodle.mdl_course c ON substr(c.idnumber, 1, 5) = IdUC.codigo_da_uc "
+                . $criteria . ";";
 
         $result = $DB->get_records_sql($query, null, 0, 0);
 

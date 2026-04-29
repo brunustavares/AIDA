@@ -11,7 +11,7 @@
  * @copyright  Copyright (C) 2024-present Bruno Tavares
  * @license    GNU General Public License v3 or later
  *             https://www.gnu.org/licenses/gpl-3.0.html
- * @version    2025121806
+ * @version    2026042811
  * @date       2024-10-09
  *
  * This program is free software: you can redistribute it and/or modify
@@ -182,6 +182,15 @@ $functions = [
         'methodname' => 'execute',
         'classpath' => 'local/aida/external/folio_historico_data.php',
         'description' => 'histórico de datas dos e-fólios',
+        'capabilities' => $capabilities,
+        'type' => 'read',
+        'ajax' => true,
+    ],
+    'local_aida_iduc' => [
+        'classname' => 'iduc',
+        'methodname' => 'execute',
+        'classpath' => 'local/aida/external/iduc.php',
+        'description' => 'dados da IdUC nas UCs',
         'capabilities' => $capabilities,
         'type' => 'read',
         'ajax' => true,

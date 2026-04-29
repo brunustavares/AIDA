@@ -3,123 +3,155 @@
 </p>
 
 # AIDA
-Moodle local plugin developed to provide a comprehensive suite of web services for data loading and reporting. It exposes numerous endpoints that allow external systems to query and retrieve aggregated academic data, performance indicators, and statistics directly from the Moodle database.
 
-The plugin is designed to serve as a data source for business intelligence platforms, dashboards, or other institutional systems that require detailed information about student and teacher activities within Moodle.
+AIDA is a Moodle local plugin (`local_aida`) that exposes read-only external web services for academic data loading and reporting. It is intended to feed business intelligence platforms, dashboards, and other institutional systems that need structured Moodle activity, assessment, and course data.
 
 This plugin was originally developed for [Universidade Aberta (UAb)](https://portal.uab.pt/).
 
 ## 1. Core Features
 
-*   **Extensive Data Endpoints**: Offers a wide range of web services to extract data related to courses, students, forum posts, assessments, and user activity.
-*   **Performance-Oriented**: Queries are designed for data extraction, often using pre-aggregated data from materialized views (`mv_*`) and including hints like `MAX_EXECUTION_TIME(0)` to handle large datasets.
-*   **Parameter-Driven Queries**: Most endpoints are filterable by academic year (`ano_lectivo`), with some offering more granular filtering by student lists, course lists, or date ranges.
-*   **Read-Only Access**: All web services are defined as `read` operations, ensuring they do not modify Moodle data.
-*   **AJAX Enabled**: All services are configured for AJAX calls, making them suitable for integration with modern web applications.
-*   **Secure**: Access to all endpoints is protected by Moodle's capabilities system, requiring the `moodle/site:viewreports` capability.
+*   **Registry-based Moodle Web Services**: All endpoints are Moodle external functions registered under the `local_aida_*` namespace.
+*   **Read-only Reporting**: Every registered service is declared as `type => read`; the plugin is designed for extraction, not Moodle data mutation.
+*   **AJAX-ready Services**: All registered services set `ajax => true`.
+*   **Capability-protected Access**: Every registered service requires the `moodle/site:viewreports` capability.
+*   **Academic-year Filtering**: Most endpoints accept `ano_lectivo` in `AAAABB` format and default to the current academic year.
+*   **Targeted Optional Filters**: Several endpoints accept base64-encoded student lists, UC lists, date ranges, NEEs status, workflow presence choice, or IdUC assessment strategy.
+*   **Reporting-oriented SQL**: Endpoints query Moodle tables, custom views, and materialized views directly through `$DB->get_records_sql()`, often using `MAX_EXECUTION_TIME(0)` for large reporting queries.
 
 ## 2. Architecture
 
-`AIDA` is implemented as a standard Moodle local plugin (`local_aida`). Its architecture is straightforward and consists of two main parts:
+`AIDA` follows the standard Moodle local plugin structure:
 
-1.  **Service Definitions (`db/services.php`)**: This file acts as a registry, defining all the external functions (web services) that the plugin provides. For each function, it specifies:
-    *   The function name (e.g., `local_aida_dsd`).
-    *   The implementing class and method.
-    *   A description of the service.
-    *   The required capability to access it.
+The service registry is defined in [`db/services.php`](db/services.php), and each endpoint is implemented in its own file under [`external/`](external/).
 
-2.  **External API Implementations (`external/*.php`)**: Each web service is implemented in its own PHP file within the `external/` directory. These files contain a class that extends Moodle's `\core_external\external_api` and typically includes three static methods:
-    *   `execute_parameters()`: Defines the input parameters the web service accepts (e.g., `ano_lectivo`).
-    *   `execute()`: Contains the core business logic. It builds and executes a SQL query against the Moodle database using the global `$DB` object and returns the results.
-    *   `execute_returns()`: Defines the structure of the data that the web service returns, ensuring a consistent and predictable output format.
+1.  **Service registry (`db/services.php`)**: Defines the exposed function name, class, method, class path, description, capability, access type, and AJAX availability.
+2.  **External API implementations (`external/*.php`)**: Each service extends `\core_external\external_api` and defines:
+    *   `execute_parameters()`: accepted request parameters.
+    *   `execute()`: query construction and execution.
+    *   `execute_returns()`: returned data structure.
 
 ### Data Flow
 
-The typical data flow is as follows:
-1.  An external client (e.g., a BI tool, a web application) makes an authenticated request to a Moodle web service endpoint provided by AIDA.
-2.  Moodle's external services layer routes the request to the appropriate class and method in the `local_aida` plugin.
-3.  The `execute()` method in the corresponding `external/*.php` file is called.
-4.  The method constructs and runs a SQL query to fetch the requested data from the Moodle database.
-5.  The data is returned to the client in the format defined by the `execute_returns()` method.
+1.  An authenticated client calls Moodle's web service endpoint, for example `/webservice/rest/server.php`.
+2.  Moodle resolves the requested `wsfunction` to a registered `local_aida_*` function.
+3.  Moodle loads the corresponding class from `external/*.php`.
+4.  The endpoint validates parameters, executes the reporting SQL query, and returns the structured result.
 
-## 3. Web Service Endpoints
+## 3. Endpoint Registry
 
-The following is a detailed list of all web services provided by the AIDA plugin. All services require the `moodle/site:viewreports` capability.
+The plugin currently registers **31** read-only endpoints. The table below is based on the endpoints defined in `db/services.php` and the parameter/return structures implemented in `external/*.php`.
 
-### 3.1. Teacher and Course Distribution
+### Parameter Reference
 
-*   **`local_aida_dsd`**: Distribuição do serviço do docente.
+*   `ano_lectivo`: Academic year in `AAAABB` format, for example `202425`. Defaults to the current academic year in most endpoints.
+*   `lista_stds`: Optional base64-encoded student list, formatted as `NNNNNNN, NNNNNNN, ...`.
+*   `lista_ucs`: Optional base64-encoded UC list, formatted as `NNNNN, NNNNN, ...`.
+*   `de_ate`: Optional date interval in `AAAAMMDD_AAAAMMDD` format.
+*   `status`: Optional NEEs status filter, `0` or `1`.
+*   `flow_inloco`: Optional workflow in-person choice filter, `0` or `1`; the endpoint default leaves the result unfiltered.
+*   `estrategia_de_avaliacao`: Optional IdUC assessment strategy/tipologia filter.
 
-### 3.2. Student Data & Assessments
+### Teacher and Course Distribution
 
-*   **`local_aida_estudantes_1C_AC_opcao`**: Estudantes em avaliação contínua p/ opção.
-*   **`local_aida_estudantes_1C_AC`**: Total de estudantes em avaliação contínua.
-*   **`local_aida_estudantes_1C_efolios_nota`**: E-fólios com nota.
-*   **`local_aida_estudantes_1C_efolios`**: Total de e-fólios submetidos.
-*   **`local_aida_estudantes_ausentes`**: Estudantes ausentes do sistema.
-*   **`local_aida_estudantes_avaliacao`**: Avaliação dos estudantes p/ inscrição nas provas.
-*   **`local_aida_estudantes_folios`**: Notas parcelares em avaliação contínua.
-*   **`local_aida_estudantes_inscritos_UC`**: Total de estudantes inscritos nas UCs.
-*   **`local_aida_estudantes_NEEs`**: Estudantes com Necessidades Educativas Especiais.
-*   **`local_aida_estudantes_MAO`**: Frequência do Módulo de Ambientação Online.
-*   **`local_aida_estudantes_UC_acesso`**: Acessos dos estudantes às UCs e ao sistema.
-*   **`local_aida_estudantes_UC_actividade`**: Actividades dos estudantes nas UCs.
-*   **`local_aida_estudantes_UC_escolha`**: Escolhas do método de avaliação por estudante e UC.
-*   **`local_aida_estudantes_WF_escolha`**: Escolhas da realização presencial dos fluxos por estudante.
-*   **`local_aida_folio_historico_data`**: Histórico de datas dos e-fólios.
+| Function | Purpose | Parameters | Returns |
+| --- | --- | --- | --- |
+| `local_aida_dsd` | Distribuição do serviço docente por UC. | `ano_lectivo` | `id`, `al`, `crs`, `usr`, `usrnm` |
 
-### 3.3. Forum Posts & Interaction
+### Student Data and Assessments
 
-*   **`local_aida_feedback_efolios_palavras`**: Total de palavras no feedback dos e-fólios.
-*   **`local_aida_posts_UC_dias_docentes_tutores`**: Total de posts por dias e docentes/tutores.
-*   **`local_aida_posts_UC_dias`**: Total de posts por dias.
-*   **`local_aida_posts_UC_docentes_tutores`**: Total de posts por docentes/tutores.
-*   **`local_aida_posts_UC_estudantes`**: Total de posts por estudantes.
-*   **`local_aida_posts_UC_palavras_docentes_tutores`**: Total de palavras nos posts por docentes/tutores.
-*   **`local_aida_posts_UC_palavras`**: Total de palavras nos posts.
-*   **`local_aida_posts_UC_semanas_docentes_tutores`**: Total de posts por semanas e docentes/tutores.
-*   **`local_aida_posts_UC_semanas`**: Total de posts por semanas.
-*   **`local_aida_posts_UC_utilizadores`**: Total de posts por utilizadores.
-*   **`local_aida_posts_UC`**: Total de posts.
+| Function | Purpose | Parameters | Returns |
+| --- | --- | --- | --- |
+| `local_aida_estudantes_1C_AC_opcao` | Estudantes em avaliação contínua por opção. | `ano_lectivo` | `id`, `al`, `crs`, `tstd` |
+| `local_aida_estudantes_1C_AC` | Total de estudantes em avaliação contínua. | `ano_lectivo` | `id`, `al`, `crs`, `tstd` |
+| `local_aida_estudantes_1C_efolios_nota` | E-fólios com nota por estudante e UC. | `ano_lectivo` | `id`, `al`, `std`, `crs`, `grd` |
+| `local_aida_estudantes_1C_efolios` | Total de e-fólios submetidos por UC. | `ano_lectivo` | `id`, `al`, `crs`, `tsubs` |
+| `local_aida_estudantes_ausentes` | Estudantes ausentes do sistema. | `ano_lectivo` | `id`, `al`, `usr`, `usrnm`, `email` |
+| `local_aida_estudantes_avaliacao` | Avaliação dos estudantes para inscrição nas provas. | `ano_lectivo`, `lista_stds`, `lista_ucs`, `de_ate` | `id`, `al`, `stdnum`, `stdname`, `stdemail`, `stdid`, `ucsname`, `ucfname`, `ucid`, `efolios`, `pfolio`, `exame`, `final`, `aval`, `updated` |
+| `local_aida_estudantes_folios` | Notas parcelares em avaliação contínua. | `ano_lectivo`, `lista_stds`, `lista_ucs`, `de_ate` | `id`, `al`, `stdnum`, `stdname`, `stdid`, `ucsname`, `ucfname`, `ucid`, `folio`, `subdt`, `grd`, `grddt`, `acttype` |
+| `local_aida_estudantes_inscritos_UC` | Total de estudantes inscritos nas UCs. | `ano_lectivo` | `id`, `al`, `crs`, `tstd` |
+| `local_aida_estudantes_NEEs` | Estudantes com Necessidades Educativas Especiais. | `lista_stds`, `status` | `id`, `stdnum`, `stdname`, `stdid`, `status`, `xtrt` |
+| `local_aida_estudantes_MAO` | Frequência do Módulo de Ambientação Online. | `ano_lectivo`, `lista_stds` | `id`, `al`, `stdnum`, `stdname`, `stdid`, `ucsname`, `ucfname`, `ucid`, `tcomp`, `tsub`, `tquiz` |
+| `local_aida_estudantes_UC_acesso` | Acessos dos estudantes às UCs e ao sistema. | `ano_lectivo`, `lista_stds`, `lista_ucs`, `de_ate` | `id`, `al`, `stdnum`, `stdname`, `stdid`, `ucsname`, `ucfname`, `ucid`, `lastaccess` |
+| `local_aida_estudantes_UC_actividade` | Atividades dos estudantes nas UCs. | `ano_lectivo`, `lista_stds`, `lista_ucs`, `de_ate` | `id`, `al`, `stdnum`, `stdname`, `stdid`, `ucsname`, `ucfname`, `ucid`, `actdt`, `tpost`, `tsub`, `tquiz` |
+| `local_aida_estudantes_UC_escolha` | Escolhas do método de avaliação por estudante e UC. | `ano_lectivo`, `lista_stds`, `lista_ucs`, `de_ate` | `id`, `al`, `stdnum`, `stdname`, `stdid`, `ucsname`, `ucfname`, `ucid`, `opt`, `grpadddt` |
+| `local_aida_estudantes_WF_escolha` | Escolhas da realização presencial dos fluxos por estudante. | `ano_lectivo`, `lista_stds`, `flow_inloco`, `de_ate` | `id`, `al`, `stdnum`, `stdname`, `stdid`, `flow_inloco`, `optdt` |
+| `local_aida_folio_historico_data` | Histórico de datas dos e-fólios. | `ano_lectivo`, `lista_stds`, `lista_ucs` | `id`, `al`, `stdnum`, `stdname`, `stdid`, `ucsname`, `ucfname`, `ucid`, `folio`, `closedt` |
 
-### 3.4. Aggregated Summaries
+### IdUC Data
 
-*   **`local_aida_stds_full`**: Totais por estudante.
-    *   **Description**: Retrieves aggregated data for each student for a given academic year from the `moodle.mv_AIDA_{ano_lectivo}_STDs` materialized view.
-    *   **Returns**: `id`, `al` (ano lectivo), `std` (student number), `crs` (course code), `grd` (e-folio grade), `posts` (total posts).
+| Function | Purpose | Parameters | Returns |
+| --- | --- | --- | --- |
+| `local_aida_iduc` | Dados da IdUC nas UCs. | `ano_lectivo`, `lista_ucs`, `estrategia_de_avaliacao` | `id`, `al`, `ucsname`, `ucfname`, `ucid`, `iduc_ate`, `docente`, `sinopse`, `bibliografia`, `estrategia_de_avaliacao`, `at01_valor`, `at02_valor`, `at03_valor`, `at04_valor`, `at04_fluxo`, `exame`, `exame_fluxo`, `dimensao_do_gatu`, `lia`, `iduc_reg`, `docusr`, `docname`, `docid` |
 
-*   **`local_aida_ucs_full`**: Totais por UC (Unidade Curricular).
-    *   **Description**: Retrieves a comprehensive set of aggregated metrics for each course for a given academic year from the `moodle.mv_AIDA_{ano_lectivo}_UCs` materialized view.
-    *   **Returns**: `id`, `al`, `crs`, `stds` (total students), `stdsac` (students in continuous assessment), `stdsacop` (students in continuous assessment by choice), `efolios` (students with submitted e-folios), `fdbkwords` (feedback word count), `posts`, `parts` (participants), `postsdt` (teacher/tutor posts), `days` (days with posts), `daysdt` (teacher/tutor days with posts), `weeks` (weeks with posts), `weeksdt` (teacher/tutor weeks with posts), `words` (word count), `wordsdt` (teacher/tutor word count).
+`local_aida_iduc` reads the Moodle `IdUC` database activity, pivots configured IdUC fields into one row per UC record, joins the extracted UC code back to Moodle course data, and orders results by course short name. It detects `Tipologia NN` values in `estrategia_de_avaliacao` and normalizes the matching `tpNN_*` fields into `at01_valor`, `at02_valor`, `at03_valor`, `at04_valor`, `at04_fluxo`, and `exame`.
 
-*   **`local_aida_ucs_flows_tipo`**: Tipos de fluxo por UC.
+### Forum Posts and Interaction
+
+| Function | Purpose | Parameters | Returns |
+| --- | --- | --- | --- |
+| `local_aida_feedback_efolios_palavras` | Total de palavras no feedback dos e-fólios. | `ano_lectivo` | `id`, `al`, `crs`, `tword` |
+| `local_aida_posts_UC_dias_docentes_tutores` | Total de dias com posts por docentes/tutores. | `ano_lectivo` | `id`, `al`, `crs`, `tday` |
+| `local_aida_posts_UC_dias` | Total de dias com posts por UC. | `ano_lectivo` | `id`, `al`, `crs`, `tday` |
+| `local_aida_posts_UC_docentes_tutores` | Total de posts por docentes/tutores. | `ano_lectivo` | `id`, `al`, `crs`, `tpost` |
+| `local_aida_posts_UC_estudantes` | Total de posts por estudante e UC. | `ano_lectivo` | `id`, `al`, `std`, `crs`, `tpost` |
+| `local_aida_posts_UC_palavras_docentes_tutores` | Total de palavras nos posts por docentes/tutores. | `ano_lectivo` | `id`, `al`, `crs`, `tword` |
+| `local_aida_posts_UC_palavras` | Total de palavras nos posts por UC. | `ano_lectivo` | `id`, `al`, `crs`, `tword` |
+| `local_aida_posts_UC_semanas_docentes_tutores` | Total de semanas com posts por docentes/tutores. | `ano_lectivo` | `id`, `al`, `crs`, `tweek` |
+| `local_aida_posts_UC_semanas` | Total de semanas com posts por UC. | `ano_lectivo` | `id`, `al`, `crs`, `tweek` |
+| `local_aida_posts_UC_utilizadores` | Total de utilizadores participantes por UC. | `ano_lectivo` | `id`, `al`, `crs`, `tpart` |
+| `local_aida_posts_UC` | Total de posts por UC. | `ano_lectivo` | `id`, `al`, `crs`, `tpost` |
+
+### Aggregated Summaries
+
+| Function | Purpose | Parameters | Returns |
+| --- | --- | --- | --- |
+| `local_aida_stds_full` | Totais agregados por estudante. | `ano_lectivo` | `id`, `al`, `std`, `crs`, `grd`, `posts` |
+| `local_aida_ucs_full` | Totais agregados por UC. | `ano_lectivo` | `id`, `al`, `crs`, `stds`, `stdsac`, `stdsacop`, `efolios`, `fdbkwords`, `posts`, `parts`, `postsdt`, `days`, `daysdt`, `weeks`, `weeksdt`, `words`, `wordsdt` |
+| `local_aida_ucs_flows_tipo` | Tipos de fluxo por UC. | `ano_lectivo`, `lista_ucs` | `id`, `al`, `ucsname`, `ucfname`, `ucid`, `docusr`, `docname`, `docid`, `flow`, `type`, `optdt` |
 
 ## 4. Technical Details
 
+*   **Component**: `local_aida`
 *   **Backend**: PHP, Moodle External Services API
-*   **Database**: Moodle DBAL (primarily tested with MySQL/MariaDB)
-*   **Dependencies**: Relies on the core Moodle API.
+*   **Plugin version**: `2026042811`
+*   **Release**: `v1`
+*   **Minimum Moodle build configured in `version.php`**: `2024042209`
+*   **Database access**: Moodle `$DB` API with direct SQL reporting queries.
 
 ### Default Academic Year
 
-A global variable `$default_al` is used across the external API files to determine the default academic year if one is not provided in the request. The logic is as follows:
-*   If the current month is September (9) or later, the academic year is `YYYY(YYYY+1)`.
-*   If the current month is before September, the academic year is `(YYYY-1)YYYY`.
+Most external API files compute a default `$default_al`:
 
-For example:
-*   In October 2024, `$default_al` would be `202425`.
-*   In February 2025, `$default_al` would be `202425`.
+*   If the current month is September or later, the academic year is `YYYY(YY+1)`.
+*   If the current month is before September, the academic year is `(YYYY-1)YY`.
 
-### SQL Queries
+Examples:
 
-The plugin makes extensive use of direct SQL queries via `$DB->get_records_sql()`. The queries are highly specific to the UAb Moodle database schema, including custom materialized views (e.g., `mv_CoursePostAll`, `mv_AIDA_*_UCs`). They often contain complex `WHERE` clauses to filter by academic year based on Moodle's `course.idnumber` format.
+*   October 2024 defaults to `202425`.
+*   February 2025 defaults to `202425`.
+
+### SQL Sources
+
+The plugin queries Moodle core tables and UAb-specific reporting structures, including:
+
+*   Moodle tables such as `mdl_course`, `mdl_user`, `mdl_context`, `mdl_role_assignments`, `mdl_enrol`, `mdl_user_enrolments`, `mdl_forum_posts`, `mdl_forum_discussions`, `mdl_grade_items`, `mdl_grade_grades`, `mdl_choice*`, `mdl_feedback*`, `mdl_data*`, and activity completion/submission tables.
+*   UAb custom views/materialized views such as `moodle.vw_CourseStudent`, `moodle.vw_StudentAC_EfolioAvg`, `moodle.mv_CoursePostAll`, `moodle.mv_AIDA_{ano_lectivo}_STDs`, and `moodle.mv_AIDA_{ano_lectivo}_UCs`.
+*   UAb custom tables/schemas such as `moodle.tbl_folio_date_history` and `inscricoes.alunos_inscricoes`.
+
+Many filters rely on the UAb Moodle `course.idnumber` / `course.shortname` format, especially the academic-year segment and UC code prefix.
 
 ## 5. Setup and Usage
 
-1.  Install the plugin in the `local/aida` directory of your Moodle instance.
-2.  Visit the Moodle notifications page (`/admin/index.php`) to allow the plugin to install its database tables and other components.
-3.  Enable Moodle's web services and create a user with a token that has the `moodle/site:viewreports` capability.
-4.  Configure your external application to make requests to the Moodle web service URL (e.g., `https://your.moodle.site/webservice/rest/server.php`) using the created token and the appropriate function name (e.g., `local_aida_ucs_full`).
+1.  Install the plugin in the `local/aida` directory of the Moodle instance.
+2.  Visit Moodle's admin notifications page (`/admin/index.php`) so Moodle registers the plugin.
+3.  Enable Moodle web services.
+4.  Create or select a service user with the `moodle/site:viewreports` capability.
+5.  Generate a web service token for the service user.
+6.  Call Moodle's web service endpoint with a registered function name, for example:
+
+```text
+https://your.moodle.site/webservice/rest/server.php?wstoken=TOKEN&wsfunction=local_aida_ucs_full&moodlewsrestformat=json&ano_lectivo=202425
+```
 
 ## 6. License
 
@@ -129,7 +161,7 @@ The plugin makes extensive use of direct SQL queries via `$DB->get_records_sql()
 **Copyright**: 2024-present Bruno Tavares  
 **License**: GNU GPL v3 or later  
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or, at your option, any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
@@ -137,5 +169,5 @@ You should have received a copy of the GNU General Public License along with thi
 
 ### Assets
 
-- **Source code**: GNU GPL v3 or later (© Bruno Tavares)  
-- **Image**: created using [Image Creator from ©Microsoft Designer](https://www.bing.com/images/create?FORM=IRPGEN)
+*   **Source code**: GNU GPL v3 or later, copyright Bruno Tavares.
+*   **Image**: Created using [Image Creator from Microsoft Designer](https://www.bing.com/images/create?FORM=IRPGEN).

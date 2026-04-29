@@ -11,7 +11,7 @@
  * @copyright  Copyright (C) 2024-present Bruno Tavares
  * @license    GNU General Public License v3 or later
  *             https://www.gnu.org/licenses/gpl-3.0.html
- * @version    2025121806
+ * @version    2026042811
  * @date       2024-10-09
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,7 +31,7 @@
 defined('MOODLE_INTERNAL') || die();
 
     $plugin->component = 'local_aida';
-    $plugin->version   = 2025121806;
+    $plugin->version   = 2026042811;
     $plugin->release   = "v1";
     $plugin->requires  = 2024042209;      // PlataformAbERTA
     // $plugin->requires  = 2018120310;   // Moodle@spiderPhone

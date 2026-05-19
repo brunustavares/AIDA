@@ -65,9 +65,9 @@ class ucs_flows_tipo extends \core_external\external_api {
 
         $criteria .= "ORDER BY ucsname ASC, optdt DESC, flow ASC ";
 
-        if ($lista_ucs) {
-            $criteria .= "LIMIT 2 ";
-        }
+        // if ($lista_ucs) {
+        //     $criteria .= "LIMIT 2 ";
+        // }
 
         $query = "SELECT /*+ MAX_EXECUTION_TIME(0) */
                          fulldata.id,

@@ -169,13 +169,13 @@ class iduc extends \core_external\external_api {
                                to_ascii(concat(u.firstname, ' ', u.lastname)) AS docname,
                                u.id AS docid
                         FROM moodle.mdl_data db
-                            JOIN moodle.mdl_data_fields dbf ON dbf.dataid = db.id
+							JOIN moodle.mdl_data_fields dbf ON dbf.dataid = db.id
                             JOIN moodle.mdl_data_content dbc ON dbc.fieldid = dbf.id
-                            JOIN moodle.mdl_data_records dbr ON dbr.dataid = db.id
+                            JOIN moodle.mdl_data_records dbr ON dbr.dataid = db.id AND dbr.id = dbc.recordid
                             JOIN moodle.mdl_course c ON c.id = db.course
                             JOIN moodle.mdl_user u ON u.id = dbr.userid
-                        WHERE db.name = 'IdUC' 
-                        GROUP BY c.id , db.id
+						WHERE db.name = 'IdUC' 
+                        GROUP BY dbr.id, c.id, db.id
                        ) AS IdUC
                       INNER JOIN moodle.mdl_course c ON substr(c.idnumber, 1, 5) = IdUC.codigo_da_uc "
                 . $criteria . ";";

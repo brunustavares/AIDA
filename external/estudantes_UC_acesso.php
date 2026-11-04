@@ -97,6 +97,7 @@ class estudantes_UC_acesso extends \core_external\external_api {
                          ucsname AS ucsname,
                          to_ascii(ucfname) AS ucfname,
                          ucid AS ucid,
+                         gatu AS gatu,
                          FROM_UNIXTIME(lastaccess) AS lastaccess
                   FROM (
                         SELECT /*+ MAX_EXECUTION_TIME(0) */
@@ -106,6 +107,7 @@ class estudantes_UC_acesso extends \core_external\external_api {
                                '(sys_logon)' AS ucsname,
                                'PlataformAbERTA' AS ucfname,
                                '1' AS ucid,
+                               'NA' AS gatu,
                                usr.currentlogin AS lastaccess
                         FROM moodle.mdl_user usr
                         WHERE usr.username REGEXP '^[0-9]+$'
@@ -118,16 +120,14 @@ class estudantes_UC_acesso extends \core_external\external_api {
                                crs.shortname AS ucsname,
                                crs.fullname AS ucfname,
                                crs.id AS ucid,
+                               IF(ai.GATU IS NOT NULL, ai.GATU, 'NA') AS gatu,
                                usr_acs.timeaccess AS lastaccess
                         FROM moodle.mdl_user_lastaccess usr_acs
-                            INNER JOIN moodle.mdl_course crs ON crs.id = usr_acs.courseid
                             INNER JOIN moodle.mdl_user usr ON usr.id = usr_acs.userid
-                            INNER JOIN mdl_enrol e ON e.courseid = crs.id
-                            INNER JOIN mdl_user_enrolments ue ON (ue.userid = usr.id AND ue.enrolid = e.id)
+                            INNER JOIN moodle.mdl_course crs ON crs.id = usr_acs.courseid
+                            LEFT JOIN inscricoes.alunos_inscricoes ai ON (ai.TURMA_MOODLE = crs.idnumber AND ai.CD_ALUNO = usr.username)
                         WHERE usr.username REGEXP '^[0-9]+$'
                             AND usr_acs.timeaccess >= UNIX_TIMESTAMP('" . $from_dt . "')
-                            AND e.enrol IN ('database','manual')
-                            AND ue.status = 0
                        ) AS usr_logon "
                 . $criteria .
                  "ORDER BY stdnum ASC, ucsname ASC;";
@@ -148,6 +148,7 @@ class estudantes_UC_acesso extends \core_external\external_api {
                 'ucsname' => new external_value(PARAM_TEXT, 'nume curto da UC'),
                 'ucfname' => new external_value(PARAM_TEXT, 'nome completo da UC'),
                 'ucid' => new external_value(PARAM_INT, 'ID da UC'),
+                'gatu' => new external_value(PARAM_TEXT, 'GATu'),
                 'lastaccess' => new external_value(PARAM_TEXT, 'ultimo acesso')
             ])
         );

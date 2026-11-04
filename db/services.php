@@ -11,7 +11,7 @@
  * @copyright  Copyright (C) 2024-present Bruno Tavares
  * @license    GNU General Public License v3 or later
  *             https://www.gnu.org/licenses/gpl-3.0.html
- * @version    2026042811
+ * @version    2026100603
  * @date       2024-10-09
  *
  * This program is free software: you can redistribute it and/or modify
@@ -299,6 +299,15 @@ $functions = [
         'methodname' => 'execute',
         'classpath' => 'local/aida/external/ucs_flows_tipo.php',
         'description' => 'tipos de fluxo por UC',
+        'capabilities' => $capabilities,
+        'type' => 'read',
+        'ajax' => true,
+    ],
+    'local_aida_ucs_gatus' => [
+        'classname' => 'ucs_gatus',
+        'methodname' => 'execute',
+        'classpath' => 'local/aida/external/ucs_gatus.php',
+        'description' => 'informação dos GATus por UC',
         'capabilities' => $capabilities,
         'type' => 'read',
         'ajax' => true,

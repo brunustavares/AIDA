@@ -86,26 +86,25 @@ class estudantes_UC_actividade extends \core_external\external_api {
                                                  stdNum,
                                                  stdName,
                                                  stdEmail,
-                                                 role
+                                                 role,
+                                                 GATU
                                           FROM moodle.vw_CourseStudent vw
-                                              INNER JOIN mdl_enrol e ON e.courseid = vw.crsID
-                                              INNER JOIN mdl_user_enrolments ue ON (ue.userid = vw.stdID AND ue.enrolid = e.id)
+											  INNER JOIN inscricoes.alunos_inscricoes ai ON (ai.TURMA_MOODLE = vw.shortname AND ai.CD_ALUNO = vw.stdNum)
                                           WHERE (shortname LIKE CONCAT('_1___\_', SUBSTRING('" . $ano_lectivo . "', 3, 2), '\___')
                                                   AND RIGHT(shortname, 2) REGEXP('^[0-9]+$')
-                                                  AND SUBSTRING(shortname, 10, 2) <> '00')
-                                              AND e.enrol IN ('database','manual')
-                                              AND ue.status = 0 "
+                                                  AND SUBSTRING(shortname, 10, 2) <> '00') "
                                             . $criteria_UCs .
                                         "),
                        ForumPosts AS (
                                       SELECT /*+ MAX_EXECUTION_TIME(0) */
                                              post.userid,
                                              disc.course,
+                                             cs.gatu,
                                              DATE(FROM_UNIXTIME(post.modified)) AS activity_date,
                                              COUNT(*) AS tpost
                                       FROM moodle.mdl_forum_posts post
                                           JOIN moodle.mdl_forum_discussions disc ON disc.id = post.discussion
-                                          JOIN ActiveStudents cs ON cs.crsID = disc.course AND cs.stdID = post.userid
+                                          JOIN ActiveStudents cs ON (cs.crsID = disc.course AND cs.stdID = post.userid)
                                       WHERE TRUE "
                                         . $criteria_postDts .
                                      "GROUP BY post.userid, disc.course, activity_date
@@ -114,11 +113,12 @@ class estudantes_UC_actividade extends \core_external\external_api {
                                           SELECT /*+ MAX_EXECUTION_TIME(0) */
                                                  sub.userid,
                                                  asg.course,
+                                                 cs.gatu,
                                                  DATE(FROM_UNIXTIME(sub.timemodified)) AS activity_date,
                                                  COUNT(*) AS tsub
                                           FROM moodle.mdl_assign_submission sub
                                               JOIN moodle.mdl_assign asg ON asg.id = sub.assignment
-                                              JOIN ActiveStudents cs ON cs.crsID = asg.course AND cs.stdID = sub.userid
+                                              JOIN ActiveStudents cs ON (cs.crsID = asg.course AND cs.stdID = sub.userid)
                                           WHERE sub.status = 'submitted' "
                                             . $criteria_subDts .
                                          "GROUP BY sub.userid, asg.course, activity_date
@@ -127,11 +127,12 @@ class estudantes_UC_actividade extends \core_external\external_api {
                                         SELECT /*+ MAX_EXECUTION_TIME(0) */
                                                qa.userid,
                                                q.course,
+                                               cs.gatu,
                                                DATE(FROM_UNIXTIME(qa.timemodified)) AS activity_date,
                                                COUNT(*) AS tquiz
                                         FROM moodle.mdl_quiz_attempts qa
                                             JOIN moodle.mdl_quiz q ON q.id = qa.quiz
-                                            JOIN ActiveStudents cs ON cs.crsID = q.course AND cs.stdID = qa.userid
+                                            JOIN ActiveStudents cs ON (cs.crsID = q.course AND cs.stdID = qa.userid)
                                         WHERE qa.state = 'finished' "
                                           . $criteria_quizDts .
                                        "GROUP BY qa.userid, q.course, activity_date
@@ -145,6 +146,7 @@ class estudantes_UC_actividade extends \core_external\external_api {
                          cs.shortname AS ucsname,
                          TO_ASCII(cs.fullname) AS ucfname,
                          cs.crsID AS ucid,
+                         IF(cs.gatu IS NOT NULL, cs.gatu, 'NA') AS gatu,
                          COALESCE(fp.activity_date, asub.activity_date, qat.activity_date) AS actdt,
                          COALESCE(fp.tpost, 0) AS tpost,
                          COALESCE(asub.tsub, 0) AS tsub,
@@ -176,6 +178,7 @@ class estudantes_UC_actividade extends \core_external\external_api {
                 'ucsname' => new external_value(PARAM_TEXT, 'nume curto da UC'),
                 'ucfname' => new external_value(PARAM_TEXT, 'nome completo da UC'),
                 'ucid' => new external_value(PARAM_INT, 'ID da UC'),
+                'gatu' => new external_value(PARAM_TEXT, 'GATu'),
                 'actdt' => new external_value(PARAM_TEXT, 'data das actividades'),
                 'tpost' => new external_value(PARAM_INT, 'Total de posts em foruns'),
                 'tsub' => new external_value(PARAM_INT, 'Total de submissoes'),

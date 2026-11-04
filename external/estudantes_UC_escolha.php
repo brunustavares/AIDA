@@ -68,9 +68,7 @@ class estudantes_UC_escolha extends \core_external\external_api {
             $criteria .= "AND SUBSTR(crs_std.shortname, 1, 5) IN (" . base64_decode($lista_ucs) . ") ";
         }
 
-        $criteria .= ") AND grp.name IN ('Avaliação Contínua' , 'Exame')
-                        AND e.enrol IN ('database','manual')
-                        AND ue.status = 0 ";
+        $criteria .= ") AND grp.name IN ('Avaliação Contínua' , 'Exame') ";
 
         if ($lista_stds) {
             $criteria .= "AND crs_std.stdnum IN (" . base64_decode($lista_stds) . ") ";
@@ -92,13 +90,13 @@ class estudantes_UC_escolha extends \core_external\external_api {
                          crs_std.shortname AS ucsname,
                          to_ascii(crs_std.fullname) AS ucfname,
                          crs_std.crsID AS ucid,
+                         IF(ai.gatu IS NOT NULL, ai.gatu, 'NA') AS gatu,
                          IF(grp.name = 'Exame', 'F', 'C') AS opt,
                          FROM_UNIXTIME(timeadded) AS grpadddt
                   FROM moodle.vw_CourseStudent crs_std
+					  INNER JOIN inscricoes.alunos_inscricoes ai ON (ai.TURMA_MOODLE = crs_std.shortname AND ai.CD_ALUNO = crs_std.stdNum)
                       INNER JOIN moodle.mdl_groups grp ON grp.courseid = crs_std.crsID
-                      INNER JOIN moodle.mdl_groups_members grp_mb ON (grp_mb.groupid = grp.id AND grp_mb.userid = crs_std.stdID)
-                      INNER JOIN mdl_enrol e ON e.courseid = crs_std.crsID
-                      INNER JOIN mdl_user_enrolments ue ON (ue.userid = crs_std.stdID AND ue.enrolid = e.id) "
+                      INNER JOIN moodle.mdl_groups_members grp_mb ON (grp_mb.groupid = grp.id AND grp_mb.userid = crs_std.stdID) "
                 . $criteria . ";";
 
         $result = $DB->get_records_sql($query, null, 0, 0);
@@ -117,6 +115,7 @@ class estudantes_UC_escolha extends \core_external\external_api {
                 'ucsname' => new external_value(PARAM_TEXT, 'nume curto da UC'),
                 'ucfname' => new external_value(PARAM_TEXT, 'nome completo da UC'),
                 'ucid' => new external_value(PARAM_INT, 'ID da UC'),
+                'gatu' => new external_value(PARAM_TEXT, 'GATu'),
                 'opt' => new external_value(PARAM_TEXT, 'opcao de avaliacao'),
                 'grpadddt' => new external_value(PARAM_TEXT, 'data da adicao ao grupo de avaliacao')
             ])

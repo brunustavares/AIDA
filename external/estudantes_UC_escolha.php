@@ -94,7 +94,7 @@ class estudantes_UC_escolha extends \core_external\external_api {
                          IF(grp.name = 'Exame', 'F', 'C') AS opt,
                          FROM_UNIXTIME(timeadded) AS grpadddt
                   FROM moodle.vw_CourseStudent crs_std
-					  INNER JOIN inscricoes.alunos_inscricoes ai ON (ai.TURMA_MOODLE = crs_std.shortname AND ai.CD_ALUNO = crs_std.stdNum)
+					  LEFT JOIN inscricoes.alunos_inscricoes ai ON (ai.TURMA_MOODLE = crs_std.shortname AND ai.CD_ALUNO = crs_std.stdNum)
                       INNER JOIN moodle.mdl_groups grp ON grp.courseid = crs_std.crsID
                       INNER JOIN moodle.mdl_groups_members grp_mb ON (grp_mb.groupid = grp.id AND grp_mb.userid = crs_std.stdID) "
                 . $criteria . ";";
